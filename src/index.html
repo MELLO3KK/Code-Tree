@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Directory Tree Generator</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self';">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <label>Directories to Scan:</label>
+            <div class="list-container" id="dirs-drop-area">
+                <ul id="directories-list" class="path-list"></ul>
+                <div class="button-column">
+                    <button id="add-dir-btn">Add Folders</button>
+                    <button id="remove-dir-btn">Remove Selected</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <label for="ext-entry">Allowed Extensions (comma-separated):</label>
+            <input type="text" id="ext-entry" value=".py, .txt, .js, .html, .css">
+        </div>
+
+        <div class="tabs">
+            <div class="tab-header">
+                <button class="tab-link active" data-tab="tab-hide">Hide Entirely</button>
+                <button class="tab-link" data-tab="tab-name-only">Show Name Only</button>
+                <button class="tab-link" data-tab="tab-block-content">Block Content</button>
+                <button class="tab-link" data-tab="tab-block-path">Block Path</button>
+            </div>
+
+            <div id="tab-hide" class="tab-content active">
+                <p>Folders listed here will be completely hidden.</p>
+                <div class="list-container config-drop-area" data-list-id="hide-entirely-list" data-type="folder">
+                    <ul id="hide-entirely-list" class="path-list"></ul>
+                    <div class="button-column">
+                        <button class="add-btn" data-type="folder">Add Folders</button>
+                        <button class="delete-btn">Delete Selected</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-name-only" class="tab-content">
+                <p>Only the names of these folders will be shown, not their contents.</p>
+                <div class="list-container config-drop-area" data-list-id="show-name-only-list" data-type="folder">
+                    <ul id="show-name-only-list" class="path-list"></ul>
+                    <div class="button-column">
+                        <button class="add-btn" data-type="folder">Add Folders</button>
+                        <button class="delete-btn">Delete Selected</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-block-content" class="tab-content">
+                <p>The content of these files will not be printed.</p>
+                 <div class="list-container config-drop-area" data-list-id="block-content-list" data-type="file">
+                    <ul id="block-content-list" class="path-list"></ul>
+                    <div class="button-column">
+                        <button class="add-btn" data-type="file">Add Files</button>
+                        <button class="delete-btn">Delete Selected</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-block-path" class="tab-content">
+                <p>These files will be completely hidden from the tree.</p>
+                 <div class="list-container config-drop-area" data-list-id="block-path-list" data-type="file">
+                    <ul id="block-path-list" class="path-list"></ul>
+                    <div class="button-column">
+                        <button class="add-btn" data-type="file">Add Files</button>
+                        <button class="delete-btn">Delete Selected</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <button id="save-config-btn">Save Config</button>
+            <button id="load-config-btn">Load Config</button>
+            <button id="generate-btn">Generate Tree</button>
+        </div>
+    </div>
+    <script src="./renderer.js"></script>
+</body>
+</html>

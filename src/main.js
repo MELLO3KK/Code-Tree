@@ -1,0 +1,154 @@
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const path = require('path');
+const fs = require('fs');
+
+// Main function to create the application window
+function createWindow() {
+  const mainWindow = new BrowserWindow({
+    width: 850,
+    height: 650,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  // For debugging:
+  // mainWindow.webContents.openDevTools();
+}
+
+// App lifecycle
+app.whenReady().then(() => {
+  createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+// The core tree-generating logic, translated from Python
+function generateTreeRecursive(directory, fileStream, config, prefix = '') {
+  try {
+    const items = fs.readdirSync(directory).sort();
+    const filteredItems = items.filter(item => {
+      const itemPath = path.join(directory, item);
+      return !config.hide_entirely.includes(itemPath) && !config.block_file_path.includes(itemPath);
+    });
+
+    filteredItems.forEach((item, index) => {
+      const itemPath = path.join(directory, item);
+      const isLast = index === filteredItems.length - 1;
+      const isDir = fs.statSync(itemPath).isDirectory();
+      
+      const connector = isLast ? '└── ' : '├── ';
+      const displayName = isDir ? `${item}/` : item;
+      fileStream.write(`${prefix}${connector}${displayName}\n`);
+
+      if (isDir) {
+        if (!config.show_name_only.includes(itemPath)) {
+          const newPrefix = prefix + (isLast ? '    ' : '│   ');
+          generateTreeRecursive(itemPath, fileStream, config, newPrefix);
+        }
+      } else {
+        const ext = path.extname(item).toLowerCase();
+        if (config.allowed_extensions.includes(ext) && !config.block_file_content.includes(itemPath)) {
+          try {
+            const content = fs.readFileSync(itemPath, 'utf-8').trim();
+            const contentPrefix = prefix + (isLast ? '    ' : '│   ');
+            content.split(/\r?\n/).forEach(line => {
+              fileStream.write(`${contentPrefix}    ${line}\n`);
+            });
+          } catch (e) {
+            const contentPrefix = prefix + (isLast ? '    ' : '│   ');
+            fileStream.write(`${contentPrefix}    [Error reading file: ${e.message}]\n`);
+          }
+        }
+      }
+    });
+  } catch (e) {
+    fileStream.write(`${prefix}└── [Permission denied]\n`);
+  }
+}
+
+// IPC handler to generate the tree file
+ipcMain.handle('generate-tree', async (event, config) => {
+  const { filePaths } = await dialog.showOpenDialog({
+    properties: ['openDirectory'],
+    title: 'Select Output Directory',
+  });
+
+  if (!filePaths || filePaths.length === 0) {
+    return { success: false, message: 'No output directory selected.' };
+  }
+  const outputDir = filePaths[0];
+
+  try {
+    config.directories.forEach(dir => {
+      const dirName = path.basename(dir);
+      const outputFilePath = path.join(outputDir, `${dirName}_tree.txt`);
+      const fileStream = fs.createWriteStream(outputFilePath, { encoding: 'utf-8' });
+      
+      fileStream.write(`${dirName}/\n`);
+      generateTreeRecursive(dir, fileStream, config);
+      fileStream.end();
+    });
+    return { success: true, message: `Generated ${config.directories.length} tree files in:\n${outputDir}` };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+// IPC handlers for file/folder dialogs
+ipcMain.handle('dialog:openDirectory', async () => {
+  const { filePaths } = await dialog.showOpenDialog({ properties: ['openDirectory', 'multiSelections'] });
+  return filePaths;
+});
+
+ipcMain.handle('dialog:openFiles', async () => {
+    const { filePaths } = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'] });
+    return filePaths;
+});
+
+// IPC handler for saving/loading config
+ipcMain.handle('config:save', async (event, config) => {
+    const { filePath } = await dialog.showSaveDialog({
+        title: 'Save Configuration',
+        defaultPath: 'config.json',
+        filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    });
+
+    if (filePath) {
+        try {
+            fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+    return { success: false };
+});
+
+ipcMain.handle('config:load', async () => {
+    const { filePaths } = await dialog.showOpenDialog({
+        title: 'Load Configuration',
+        filters: [{ name: 'JSON Files', extensions: ['json'] }],
+        properties: ['openFile']
+    });
+
+    if (filePaths && filePaths.length > 0) {
+        try {
+            const content = fs.readFileSync(filePaths[0], 'utf-8');
+            return { success: true, config: JSON.parse(content) };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+    return { success: false };
+});
