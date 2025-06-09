@@ -1,7 +1,7 @@
 {
   "name": "directory-tree-generator",
   "version": "1.0.0",
-  "description": "Generate directory tree structures.",
+  "description": "Generate directory tree structures with options to block specific paths.",
   "main": "src/main.js",
   "scripts": {
     "start": "electron ."

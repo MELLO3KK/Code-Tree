@@ -20,59 +20,28 @@
         </div>
 
         <div class="section">
-            <label for="ext-entry">Allowed Extensions (comma-separated):</label>
-            <input type="text" id="ext-entry" value=".py, .txt, .js, .html, .css">
+            <label>Allowed Extensions:</label>
+            <div class="list-container">
+                <ul id="extensions-list" class="path-list"></ul>
+                <div class="button-column">
+                    <button id="remove-ext-btn">Remove Selected</button>
+                </div>
+            </div>
+            <div class="entry-row">
+                <input type="text" id="ext-entry" placeholder="e.g., .js or .txt">
+                <button id="add-ext-btn">Add Extension</button>
+            </div>
         </div>
 
-        <div class="tabs">
-            <div class="tab-header">
-                <button class="tab-link active" data-tab="tab-hide">Hide Entirely</button>
-                <button class="tab-link" data-tab="tab-name-only">Show Name Only</button>
-                <button class="tab-link" data-tab="tab-block-content">Block Content</button>
-                <button class="tab-link" data-tab="tab-block-path">Block Path</button>
-            </div>
-
-            <div id="tab-hide" class="tab-content active">
-                <p>Folders listed here will be completely hidden.</p>
-                <div class="list-container config-drop-area" data-list-id="hide-entirely-list" data-type="folder">
-                    <ul id="hide-entirely-list" class="path-list"></ul>
-                    <div class="button-column">
-                        <button class="add-btn" data-type="folder">Add Folders</button>
-                        <button class="delete-btn">Delete Selected</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-name-only" class="tab-content">
-                <p>Only the names of these folders will be shown, not their contents.</p>
-                <div class="list-container config-drop-area" data-list-id="show-name-only-list" data-type="folder">
-                    <ul id="show-name-only-list" class="path-list"></ul>
-                    <div class="button-column">
-                        <button class="add-btn" data-type="folder">Add Folders</button>
-                        <button class="delete-btn">Delete Selected</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-block-content" class="tab-content">
-                <p>The content of these files will not be printed.</p>
-                 <div class="list-container config-drop-area" data-list-id="block-content-list" data-type="file">
-                    <ul id="block-content-list" class="path-list"></ul>
-                    <div class="button-column">
-                        <button class="add-btn" data-type="file">Add Files</button>
-                        <button class="delete-btn">Delete Selected</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-block-path" class="tab-content">
-                <p>These files will be completely hidden from the tree.</p>
-                 <div class="list-container config-drop-area" data-list-id="block-path-list" data-type="file">
-                    <ul id="block-path-list" class="path-list"></ul>
-                    <div class="button-column">
-                        <button class="add-btn" data-type="file">Add Files</button>
-                        <button class="delete-btn">Delete Selected</button>
-                    </div>
+        <div class="section">
+            <label>Block Paths and Files (shows name only):</label>
+            <p>Blocks folder contents and file contents for the paths listed below.</p>
+            <div class="list-container config-drop-area" data-list-id="blocked-paths-list">
+                <ul id="blocked-paths-list" class="path-list"></ul>
+                <div class="button-column">
+                    <button class="add-btn" data-type="folder">Add Folders</button>
+                    <button class="add-btn" data-type="file">Add Files</button>
+                    <button class="delete-btn">Delete Selected</button>
                 </div>
             </div>
         </div>

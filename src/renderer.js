@@ -3,7 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const dirList = document.getElementById('directories-list');
     const addDirBtn = document.getElementById('add-dir-btn');
     const removeDirBtn = document.getElementById('remove-dir-btn');
+    
     const extEntry = document.getElementById('ext-entry');
+    const addExtBtn = document.getElementById('add-ext-btn');
+    const removeExtBtn = document.getElementById('remove-ext-btn');
+    const extensionsList = document.getElementById('extensions-list');
+
+    const blockedPathsList = document.getElementById('blocked-paths-list');
+    
     const generateBtn = document.getElementById('generate-btn');
     const saveConfigBtn = document.getElementById('save-config-btn');
     const loadConfigBtn = document.getElementById('load-config-btn');
@@ -12,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const addPathsToList = (listElement, paths) => {
         const existingPaths = Array.from(listElement.children).map(li => li.textContent);
         paths.forEach(p => {
-            if (!existingPaths.includes(p)) {
+            if (p && !existingPaths.includes(p)) { // Ensure path is not empty
                 const li = document.createElement('li');
                 li.textContent = p;
                 listElement.appendChild(li);
@@ -35,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Event Listeners ---
 
-    // Main directory list buttons
+    // Main directory list
     addDirBtn.addEventListener('click', async () => {
         const paths = await window.electronAPI.openDirectoryDialog();
         if (paths) addPathsToList(dirList, paths);
@@ -43,39 +50,32 @@ document.addEventListener('DOMContentLoaded', () => {
     removeDirBtn.addEventListener('click', () => deleteSelectedFromList(dirList));
     setupListInteraction(dirList);
 
-    // Tab Configuration Lists
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        const list = tab.querySelector('.path-list');
-        const addBtn = tab.querySelector('.add-btn');
-        const deleteBtn = tab.querySelector('.delete-btn');
-
-        if (list) {
-            setupListInteraction(list);
-
-            addBtn.addEventListener('click', async () => {
-                const type = addBtn.dataset.type; // 'file' or 'folder'
-                const paths = type === 'folder' 
-                    ? await window.electronAPI.openDirectoryDialog()
-                    : await window.electronAPI.openFilesDialog();
-                if (paths) addPathsToList(list, paths);
-            });
-
-            deleteBtn.addEventListener('click', () => deleteSelectedFromList(list));
+    // Allowed extensions list
+    addExtBtn.addEventListener('click', () => {
+        const ext = extEntry.value.trim();
+        if (ext) {
+            addPathsToList(extensionsList, [ext]);
+            extEntry.value = ''; // Clear input after adding
         }
     });
+    removeExtBtn.addEventListener('click', () => deleteSelectedFromList(extensionsList));
+    setupListInteraction(extensionsList);
 
-    // Tab switching logic
-    document.querySelectorAll('.tab-link').forEach(button => {
-        button.addEventListener('click', () => {
-            document.querySelectorAll('.tab-link, .tab-content').forEach(el => el.classList.remove('active'));
-            const tabId = button.dataset.tab;
-            button.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+    // Blocked paths list
+    document.querySelectorAll('.add-btn').forEach(addBtn => {
+        addBtn.addEventListener('click', async () => {
+            const type = addBtn.dataset.type; // 'file' or 'folder'
+            const paths = type === 'folder' 
+                ? await window.electronAPI.openDirectoryDialog()
+                : await window.electronAPI.openFilesDialog();
+            if (paths) addPathsToList(blockedPathsList, paths);
         });
     });
+    document.querySelector('#blocked-paths-list + .button-column .delete-btn').addEventListener('click', () => deleteSelectedFromList(blockedPathsList));
+    setupListInteraction(blockedPathsList);
 
     // --- Drag and Drop ---
-    const setupDropArea = (area, targetList, type) => {
+    const setupDropArea = (area, targetList) => {
         area.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -98,23 +98,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    setupDropArea(document.getElementById('dirs-drop-area'), dirList, 'folder');
-    document.querySelectorAll('.config-drop-area').forEach(area => {
-        const listId = area.dataset.listId;
-        const type = area.dataset.type;
-        setupDropArea(area, document.getElementById(listId), type);
-    });
+    setupDropArea(document.getElementById('dirs-drop-area'), dirList);
+    setupDropArea(document.querySelector('.config-drop-area'), blockedPathsList);
 
     // --- Main Actions ---
     const getConfigFromUI = () => {
         const getPathsFromList = (listId) => Array.from(document.getElementById(listId).children).map(li => li.textContent);
         return {
             directories: getPathsFromList('directories-list'),
-            allowed_extensions: extEntry.value.split(',').map(ext => ext.trim().toLowerCase()).filter(Boolean),
-            hide_entirely: getPathsFromList('hide-entirely-list'),
-            show_name_only: getPathsFromList('show-name-only-list'),
-            block_file_content: getPathsFromList('block-content-list'),
-            block_file_path: getPathsFromList('block-path-list'),
+            allowed_extensions: getPathsFromList('extensions-list').map(ext => ext.toLowerCase()),
+            blocked_paths: getPathsFromList('blocked-paths-list'),
         };
     };
 
@@ -141,11 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.path-list').forEach(list => list.innerHTML = '');
             // Populate UI from config
             addPathsToList(dirList, config.directories || []);
-            extEntry.value = (config.allowed_extensions || []).join(', ');
-            addPathsToList(document.getElementById('hide-entirely-list'), config.hide_entirely || []);
-            addPathsToList(document.getElementById('show-name-only-list'), config.show_name_only || []);
-            addPathsToList(document.getElementById('block-content-list'), config.block_file_content || []);
-            addPathsToList(document.getElementById('block-path-list'), config.block_file_path || []);
+            addPathsToList(extensionsList, config.allowed_extensions || []);
+            addPathsToList(blockedPathsList, config.blocked_paths || []);
         } else if (result.message) {
             alert(`Error loading config: ${result.message}`);
         }

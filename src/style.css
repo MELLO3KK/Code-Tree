@@ -23,7 +23,7 @@ body {
     height: calc(100vh - 30px);
 }
 
-.section, .tabs, .footer {
+.section, .footer {
     background-color: var(--primary-color);
     padding: 15px;
     border-radius: 8px;
@@ -36,8 +36,12 @@ label, p {
     font-weight: 500;
 }
 
+p {
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
 input[type="text"] {
-    width: calc(100% - 16px);
     padding: 8px;
     background-color: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -96,40 +100,14 @@ button:hover {
     color: var(--bg-color);
 }
 
-/* Tabs */
-.tabs {
+.entry-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.entry-row input[type="text"] {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.tab-header {
-    display: flex;
-    border-bottom: 2px solid var(--border-color);
-}
-
-.tab-link {
-    background-color: transparent;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px 4px 0 0;
-}
-
-.tab-link.active {
-    background-color: var(--secondary-color);
-    border-bottom: 2px solid var(--highlight-color);
-}
-
-.tab-content {
-    display: none;
-    padding-top: 15px;
-    flex-grow: 1;
-    display: none;
-    flex-direction: column;
-}
-
-.tab-content.active {
-    display: flex;
 }
 
 /* Drag & Drop Highlight */
@@ -143,6 +121,7 @@ button:hover {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    margin-top: auto; /* Push footer to the bottom */
 }
 
 #generate-btn {

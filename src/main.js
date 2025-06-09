@@ -33,32 +33,29 @@ app.on('window-all-closed', () => {
   }
 });
 
-// The core tree-generating logic, translated from Python
+// The core tree-generating logic, modified for new requirements
 function generateTreeRecursive(directory, fileStream, config, prefix = '') {
   try {
     const items = fs.readdirSync(directory).sort();
-    const filteredItems = items.filter(item => {
-      const itemPath = path.join(directory, item);
-      return !config.hide_entirely.includes(itemPath) && !config.block_file_path.includes(itemPath);
-    });
 
-    filteredItems.forEach((item, index) => {
+    items.forEach((item, index) => {
       const itemPath = path.join(directory, item);
-      const isLast = index === filteredItems.length - 1;
+      const isLast = index === items.length - 1;
       const isDir = fs.statSync(itemPath).isDirectory();
       
       const connector = isLast ? '└── ' : '├── ';
       const displayName = isDir ? `${item}/` : item;
       fileStream.write(`${prefix}${connector}${displayName}\n`);
 
-      if (isDir) {
-        if (!config.show_name_only.includes(itemPath)) {
-          const newPrefix = prefix + (isLast ? '    ' : '│   ');
-          generateTreeRecursive(itemPath, fileStream, config, newPrefix);
-        }
-      } else {
+      // If the path is blocked, do not process its contents (neither recurse nor read file)
+      const isBlocked = config.blocked_paths.includes(itemPath);
+
+      if (isDir && !isBlocked) {
+        const newPrefix = prefix + (isLast ? '    ' : '│   ');
+        generateTreeRecursive(itemPath, fileStream, config, newPrefix);
+      } else if (!isDir && !isBlocked) {
         const ext = path.extname(item).toLowerCase();
-        if (config.allowed_extensions.includes(ext) && !config.block_file_content.includes(itemPath)) {
+        if (config.allowed_extensions.includes(ext)) {
           try {
             const content = fs.readFileSync(itemPath, 'utf-8').trim();
             const contentPrefix = prefix + (isLast ? '    ' : '│   ');
