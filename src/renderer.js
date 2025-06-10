@@ -58,19 +58,54 @@ document.addEventListener('DOMContentLoaded', () => {
             extEntry.value = ''; // Clear input after adding
         }
     });
+
+    // --- START: New Code ---
+    extEntry.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevents default 'Enter' behavior
+            addExtBtn.click(); // Triggers the existing add button's logic
+        }
+    });
+    // --- END: New Code ---
     removeExtBtn.addEventListener('click', () => deleteSelectedFromList(extensionsList));
     setupListInteraction(extensionsList);
 
     // Blocked paths list
+    // --- START: Replacement Code ---
+    const addValidatedBlockedPaths = (paths) => {
+        const scanDirs = Array.from(dirList.children).map(li => li.textContent);
+        if (scanDirs.length === 0) {
+            alert("Error: Please select one or more 'Directories to Scan' before adding blocked paths.");
+            return;
+        }
+
+        const validatedPaths = paths.filter(p => 
+            scanDirs.some(scanDir => p.startsWith(scanDir) && p !== scanDir)
+        );
+
+        const rejectedCount = paths.length - validatedPaths.length;
+        if (rejectedCount > 0) {
+            alert(`${rejectedCount} path(s) were not added because they are not inside a selected scan directory.`);
+        }
+        
+        if (validatedPaths.length > 0) {
+            addPathsToList(blockedPathsList, validatedPaths);
+        }
+    };
+
     document.querySelectorAll('.add-btn').forEach(addBtn => {
         addBtn.addEventListener('click', async () => {
-            const type = addBtn.dataset.type; // 'file' or 'folder'
-            const paths = type === 'folder' 
+            const type = addBtn.dataset.type;
+            const paths = type === 'folder'
                 ? await window.electronAPI.openDirectoryDialog()
                 : await window.electronAPI.openFilesDialog();
-            if (paths) addPathsToList(blockedPathsList, paths);
+            
+            if (paths) {
+                addValidatedBlockedPaths(paths);
+            }
         });
     });
+    // --- END: Replacement Code ---
     document.querySelector('#blocked-paths-list + .button-column .delete-btn').addEventListener('click', () => deleteSelectedFromList(blockedPathsList));
     setupListInteraction(blockedPathsList);
 
@@ -94,7 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
             area.classList.remove('drop-hover');
             
             const files = Array.from(e.dataTransfer.files).map(f => f.path);
-            addPathsToList(targetList, files);
+
+            if (targetList.id === 'blocked-paths-list') {
+                addValidatedBlockedPaths(files);
+            } else {
+                addPathsToList(targetList, files);
+            }
         });
     };
     
