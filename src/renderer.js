@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const saveConfigBtn = document.getElementById('save-config-btn');
     const loadConfigBtn = document.getElementById('load-config-btn');
+    const liveMonitorToggle = document.getElementById('live-monitor-toggle');
+
+    let currentOutputDir = null;
 
     // --- Utility Functions for Lists ---
     const addPathsToList = (listElement, paths) => {
@@ -158,6 +161,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const result = await window.electronAPI.generateTree(config);
+        if (result.success) {
+            currentOutputDir = result.outputDir;
+            if (liveMonitorToggle.checked) {
+                window.electronAPI.startWatching();
+            }
+        } else {
+            currentOutputDir = null;
+        }
         alert(result.message);
     });
 
@@ -178,6 +189,21 @@ document.addEventListener('DOMContentLoaded', () => {
             addPathsToList(blockedPathsList, config.blocked_paths || []);
         } else if (result.message) {
             alert(`Error loading config: ${result.message}`);
+        }
+    });
+
+    liveMonitorToggle.addEventListener('change', () => {
+        if (liveMonitorToggle.checked) {
+            if (!currentOutputDir) {
+                alert('Please generate the tree once to set an output directory before enabling live monitoring.');
+                liveMonitorToggle.checked = false;
+                return;
+            }
+            window.electronAPI.startWatching();
+            alert('Live monitoring enabled. The output file will now update automatically.');
+        } else {
+            window.electronAPI.stopWatching();
+            alert('Live monitoring disabled.');
         }
     });
 });

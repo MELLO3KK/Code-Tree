@@ -6,4 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFilesDialog: () => ipcRenderer.invoke('dialog:openFiles'),
   saveConfig: (config) => ipcRenderer.invoke('config:save', config),
   loadConfig: () => ipcRenderer.invoke('config:load'),
+  startWatching: () => ipcRenderer.send('start-watching'),
+  stopWatching: () => ipcRenderer.send('stop-watching'),
 });

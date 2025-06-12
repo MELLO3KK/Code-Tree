@@ -27,7 +27,33 @@ app.whenReady().then(() => {
   });
 });
 
+let watchers = {}; // To store active file watchers
+let lastConfig = null; // To store the last used configuration
+let lastOutputDir = null; // To store the last used output directory
+let debounceTimer = null; // To prevent rapid-fire regeneration
+
+function executeGeneration(config, outputDir) {
+  try {
+    config.directories.forEach(dir => {
+      const dirName = path.basename(dir);
+      const outputFilePath = path.join(outputDir, `${dirName}_tree.txt`);
+      const fileStream = fs.createWriteStream(outputFilePath, { encoding: 'utf-8' });
+
+      fileStream.write(`${dirName}/\n`);
+      generateTreeRecursive(dir, fileStream, config);
+      fileStream.end();
+    });
+    console.log(`Live update: Regenerated tree files in ${outputDir}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Live update failed:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 app.on('window-all-closed', () => {
+  Object.values(watchers).forEach(watcher => watcher.close());
+  watchers = {};
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -84,22 +110,48 @@ ipcMain.handle('generate-tree', async (event, config) => {
   if (!filePaths || filePaths.length === 0) {
     return { success: false, message: 'No output directory selected.' };
   }
+
   const outputDir = filePaths[0];
+  lastConfig = config;
+  lastOutputDir = outputDir;
 
   try {
-    config.directories.forEach(dir => {
-      const dirName = path.basename(dir);
-      const outputFilePath = path.join(outputDir, `${dirName}_tree.txt`);
-      const fileStream = fs.createWriteStream(outputFilePath, { encoding: 'utf-8' });
-      
-      fileStream.write(`${dirName}/\n`);
-      generateTreeRecursive(dir, fileStream, config);
-      fileStream.end();
-    });
-    return { success: true, message: `Generated ${config.directories.length} tree files in:\n${outputDir}` };
+    executeGeneration(config, outputDir);
+    return { success: true, message: `Generated ${config.directories.length} tree files in:\n${outputDir}`, outputDir: outputDir };
   } catch (error) {
     return { success: false, message: error.message };
   }
+});
+
+ipcMain.on('start-watching', () => {
+    Object.values(watchers).forEach(watcher => watcher.close());
+    watchers = {};
+
+    if (!lastConfig || !lastOutputDir) return;
+
+    lastConfig.directories.forEach(dir => {
+        try {
+            const watcher = fs.watch(dir, { recursive: true }, (eventType, filename) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    if (lastConfig && lastOutputDir) {
+                        console.log(`Change detected (${eventType}) in ${filename}. Regenerating tree...`);
+                        executeGeneration(lastConfig, lastOutputDir);
+                    }
+                }, 500);
+            });
+            watchers[dir] = watcher;
+            console.log(`Started watching: ${dir}`);
+        } catch (error) {
+            console.error(`Failed to watch directory ${dir}:`, error);
+        }
+    });
+});
+
+ipcMain.on('stop-watching', () => {
+    Object.values(watchers).forEach(watcher => watcher.close());
+    watchers = {};
+    console.log('Stopped watching all directories.');
 });
 
 // IPC handlers for file/folder dialogs
