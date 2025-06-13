@@ -4,12 +4,24 @@
   "description": "Generate directory tree structures with options to block specific paths.",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder"
   },
   "keywords": [],
-  "author": "",
+  "author": "Your Name <your.email@example.com>",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^31.0.1"
+    "electron": "^31.0.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.example.directory-tree-generator",
+    "productName": "Directory Tree Generator",
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "category": "Utility"
+    }
   }
 }
