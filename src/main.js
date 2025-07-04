@@ -2,6 +2,11 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Note: We are removing 'const Store = require('electron-store');' from here.
+
+// Keep this outside so it can be referenced by other functions if needed.
+let store;
+
 // Main function to create the application window
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -19,9 +24,39 @@ function createWindow() {
   // mainWindow.webContents.openDevTools();
 }
 
+
 // App lifecycle
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Dynamically import electron-store
+  const { default: Store } = await import('electron-store');
+
+  // Define the schema for your application's settings
+  const schema = {
+    directories: { type: 'array', default: [] },
+    allowed_extensions: { type: 'array', default: [] },
+    blocked_paths: { type: 'array', default: [] },
+    live_monitoring: { type: 'boolean', default: false },
+    output_directory: { type: 'string', default: '' }
+  };
+
+  // Initialize store here
+  store = new Store({ schema });
+
+  // --- ALL IPC HANDLERS THAT USE 'store' MUST BE INITIALIZED HERE --- 
+
+  // IPC handler to get the initial configuration
+  ipcMain.handle('get-store-data', () => {
+    return store.store;
+  });
+
+  // IPC handler to save the configuration
+  ipcMain.on('set-store-data', (event, data) => {
+    store.set(data);
+  });
+
+  // Now create the window
   createWindow();
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -201,3 +236,6 @@ ipcMain.handle('config:load', async () => {
     }
     return { success: false };
 });
+
+
+// (Other IPC handlers and functions remain unchanged)

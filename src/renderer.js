@@ -48,9 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Main directory list
     addDirBtn.addEventListener('click', async () => {
         const paths = await window.electronAPI.openDirectoryDialog();
-        if (paths) addPathsToList(dirList, paths);
+        if (paths) {
+            addPathsToList(dirList, paths);
+            saveCurrentState();
+        }
     });
-    removeDirBtn.addEventListener('click', () => deleteSelectedFromList(dirList));
+    removeDirBtn.addEventListener('click', () => {
+        deleteSelectedFromList(dirList);
+        saveCurrentState();
+    });
     setupListInteraction(dirList);
 
     // Allowed extensions list
@@ -59,18 +65,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ext) {
             addPathsToList(extensionsList, [ext]);
             extEntry.value = ''; // Clear input after adding
+            saveCurrentState();
         }
     });
-
-    // --- START: New Code ---
     extEntry.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault(); // Prevents default 'Enter' behavior
             addExtBtn.click(); // Triggers the existing add button's logic
         }
     });
-    // --- END: New Code ---
-    removeExtBtn.addEventListener('click', () => deleteSelectedFromList(extensionsList));
+    removeExtBtn.addEventListener('click', () => {
+        deleteSelectedFromList(extensionsList);
+        saveCurrentState();
+    });
     setupListInteraction(extensionsList);
 
     // Blocked paths list
@@ -90,9 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rejectedCount > 0) {
             alert(`${rejectedCount} path(s) were not added because they are not inside a selected scan directory.`);
         }
-        
         if (validatedPaths.length > 0) {
             addPathsToList(blockedPathsList, validatedPaths);
+            saveCurrentState();
         }
     };
 
@@ -108,8 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    // --- END: Replacement Code ---
-    document.querySelector('#blocked-paths-list + .button-column .delete-btn').addEventListener('click', () => deleteSelectedFromList(blockedPathsList));
+    document.querySelector('#blocked-paths-list + .button-column .delete-btn').addEventListener('click', () => {
+        deleteSelectedFromList(blockedPathsList);
+        saveCurrentState();
+    });
     setupListInteraction(blockedPathsList);
 
     // --- Drag and Drop ---
@@ -166,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (liveMonitorToggle.checked) {
                 window.electronAPI.startWatching();
             }
+            saveCurrentState();
         } else {
             currentOutputDir = null;
         }
@@ -192,6 +202,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Load and apply persistent settings
+    async function loadAndApplySettings() {
+        const storedData = await window.electronAPI.getStoreData();
+        if (storedData) {
+            // Restore directories to scan
+            if (storedData.directories) {
+                addPathsToList(dirList, storedData.directories);
+            }
+            // Restore allowed extensions
+            if (storedData.allowed_extensions) {
+                addPathsToList(extensionsList, storedData.allowed_extensions);
+            }
+            // Restore blocked paths
+            if (storedData.blocked_paths) {
+                addPathsToList(blockedPathsList, storedData.blocked_paths);
+            }
+            // Restore live monitoring toggle
+            if (typeof storedData.live_monitoring === 'boolean') {
+                liveMonitorToggle.checked = storedData.live_monitoring;
+            }
+            // Restore output directory
+            if (storedData.output_directory) {
+                currentOutputDir = storedData.output_directory;
+            }
+        }
+    }
+
+    // Call the function to load settings on startup
+    loadAndApplySettings();
+
+    // Function to get the current UI configuration and save it
+    function saveCurrentState() {
+        const currentState = {
+            directories: Array.from(dirList.children).map(li => li.textContent),
+            allowed_extensions: Array.from(extensionsList.children).map(li => li.textContent),
+            blocked_paths: Array.from(blockedPathsList.children).map(li => li.textContent),
+            live_monitoring: liveMonitorToggle.checked,
+            // Ensure output_directory is always a string
+            output_directory: currentOutputDir || ''
+        };
+        window.electronAPI.setStoreData(currentState);
+    }
+
     liveMonitorToggle.addEventListener('change', () => {
         if (liveMonitorToggle.checked) {
             if (!currentOutputDir) {
@@ -200,9 +253,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             window.electronAPI.startWatching();
+            saveCurrentState();
             alert('Live monitoring enabled. The output file will now update automatically.');
         } else {
             window.electronAPI.stopWatching();
+            saveCurrentState();
             alert('Live monitoring disabled.');
         }
     });

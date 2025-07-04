@@ -8,4 +8,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadConfig: () => ipcRenderer.invoke('config:load'),
   startWatching: () => ipcRenderer.send('start-watching'),
   stopWatching: () => ipcRenderer.send('stop-watching'),
+  getStoreData: () => ipcRenderer.invoke('get-store-data'),
+  setStoreData: (data) => ipcRenderer.send('set-store-data', data),
 });
