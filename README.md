@@ -57,6 +57,28 @@ directory-tree-generator -d /path/to/directory [options]
 | `-e, --extensions <exts...>` | Allowed file extensions to include content for | All |
 | `-b, --blocked <paths...>` | Paths to block from tree generation | None |
 | `-r, --recursive` | Generate tree recursively | true |
+| `-i, --import <file>` | Import preset configuration from JSON file | None |
+
+#### Importing Presets
+
+You can import a preset configuration from a JSON file using the `--import` or `-i` option. The JSON file should contain the following optional fields:
+
+```json
+{
+  "directories": ["/path/to/directory"],
+  "allowed_extensions": [".js", ".ts", ".json"],
+  "blocked_paths": ["node_modules", ".git"],
+  "output_directory": "/path/to/output"
+}
+```
+
+Usage:
+
+```bash
+directory-tree-generator -i preset.json
+```
+
+**Note:** CLI options take precedence over imported values. For example, if you import a preset but also specify `-d /other/path`, the command-line directory will override the one in the JSON file.
 
 #### CLI Examples
 
@@ -75,6 +97,12 @@ directory-tree-generator -d /home/user/project -o /tmp/trees
 
 # Combine multiple options
 directory-tree-generator -d /home/user/project -e .js .py -b node_modules __pycache__ -o ./output
+
+# Import preset configuration
+directory-tree-generator -i preset.json
+
+# Import preset and override specific options
+directory-tree-generator -i preset.json -d /override/path -e .md
 ```
 
 ## Building

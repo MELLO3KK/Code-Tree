@@ -10,29 +10,62 @@ program
   .version('1.1.0');
 
 program
-  .requiredOption('-d, --directories <paths...>', 'Directories to generate tree for (comma-separated or multiple -d flags)')
+  .option('-d, --directories <paths...>', 'Directories to generate tree for (comma-separated or multiple -d flags)')
   .option('-o, --output <directory>', 'Output directory for tree files', process.cwd())
   .option('-e, --extensions <exts...>', 'Allowed file extensions to include content for (e.g., .js .py)', [])
   .option('-b, --blocked <paths...>', 'Paths to block from tree generation', [])
   .option('-r, --recursive', 'Generate tree recursively', true)
+  .option('-i, --import <file>', 'Import configuration from a JSON preset file')
   .parse();
 
 const options = program.opts();
 
-// Convert extensions to lowercase and ensure they start with a dot
-const allowedExtensions = options.extensions.map(ext => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`);
+// If import option is provided, load configuration from JSON file
+let importedConfig = {};
+if (options.import) {
+  const importPath = path.resolve(options.import);
+  if (!fs.existsSync(importPath)) {
+    console.error(`Error: Import file does not exist: ${importPath}`);
+    process.exit(1);
+  }
+  try {
+    const content = fs.readFileSync(importPath, 'utf-8');
+    importedConfig = JSON.parse(content);
+    console.log(`Loaded configuration from: ${importPath}\n`);
+  } catch (error) {
+    console.error(`Error reading import file: ${error.message}`);
+    process.exit(1);
+  }
+}
 
-// Normalize blocked paths to absolute paths
-const blockedPaths = options.blocked.map(p => path.resolve(p));
+// Merge imported config with command-line options (CLI options take precedence)
+const allowedExtensions = options.extensions && options.extensions.length > 0 
+  ? options.extensions.map(ext => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`)
+  : (importedConfig.allowed_extensions || []).map(ext => ext.startsWith('.') ? ext.toLowerCase() : `.${ext.toLowerCase()}`);
 
-// Normalize directories to absolute paths
-const directories = options.directories.map(d => path.resolve(d));
+const blockedPaths = options.blocked && options.blocked.length > 0
+  ? options.blocked.map(p => path.resolve(p))
+  : (importedConfig.blocked_paths || []).map(p => path.resolve(p));
+
+const directories = options.directories 
+  ? options.directories.map(d => path.resolve(d))
+  : (importedConfig.directories || []).map(d => path.resolve(d));
+
+const outputDir = options.output !== process.cwd() 
+  ? path.resolve(options.output)
+  : (importedConfig.output_directory ? path.resolve(importedConfig.output_directory) : path.resolve(options.output));
+
+// Validate that we have directories (either from CLI or import)
+if (directories.length === 0) {
+  console.error('Error: No directories specified. Use -d/--directories or provide a JSON preset with "directories".');
+  process.exit(1);
+}
 
 console.log('Directory Tree Generator CLI');
 console.log('===========================\n');
 
 console.log(`Input directories: ${directories.join(', ')}`);
-console.log(`Output directory: ${options.output}`);
+console.log(`Output directory: ${outputDir}`);
 console.log(`Allowed extensions: ${allowedExtensions.length > 0 ? allowedExtensions.join(', ') : '(none)'}`);
 console.log(`Blocked paths: ${blockedPaths.length > 0 ? blockedPaths.join(', ') : '(none)'}\n`);
 
@@ -49,10 +82,10 @@ for (const dir of directories) {
 }
 
 // Ensure output directory exists
-if (!fs.existsSync(options.output)) {
+if (!fs.existsSync(outputDir)) {
   try {
-    fs.mkdirSync(options.output, { recursive: true });
-    console.log(`Created output directory: ${options.output}`);
+    fs.mkdirSync(outputDir, { recursive: true });
+    console.log(`Created output directory: ${outputDir}`);
   } catch (error) {
     console.error(`Error creating output directory: ${error.message}`);
     process.exit(1);
@@ -68,7 +101,7 @@ const config = {
 try {
   directories.forEach(dir => {
     const dirName = path.basename(dir);
-    const outputFilePath = path.join(options.output, `${dirName}_tree.txt`);
+    const outputFilePath = path.join(outputDir, `${dirName}_tree.txt`);
     const fileStream = fs.createWriteStream(outputFilePath, { encoding: 'utf-8' });
 
     console.log(`Generating tree for: ${dir}`);
