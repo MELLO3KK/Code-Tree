@@ -3,9 +3,13 @@
   "version": "1.1.0",
   "description": "Generate directory tree structures with options to block specific paths.",
   "main": "src/main.js",
+  "bin": {
+    "directory-tree-generator": "./src/cli.js"
+  },
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "cli": "node src/cli.js"
   },
   "keywords": [],
   "author": "Your Name <your.email@example.com>",
@@ -25,6 +29,7 @@
     }
   },
   "dependencies": {
-    "electron-store": "^10.1.0"
+    "electron-store": "^10.1.0",
+    "commander": "^11.1.0"
   }
 }
